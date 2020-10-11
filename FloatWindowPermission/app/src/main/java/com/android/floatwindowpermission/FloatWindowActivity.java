@@ -7,7 +7,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 
-import com.android.permission.FloatWindowManager;
+import me.mapleaf.permission.FloatWindowPermissionUtils;
 
 /**
  * Description:
@@ -26,16 +26,12 @@ public class FloatWindowActivity extends Activity {
         findViewById(R.id.btn_show_or_apply).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                FloatWindowManager.getInstance().applyOrShowFloatWindow(FloatWindowActivity.this);
+                FloatWindowPermissionUtils.getInstance().applyOrCheckPermission(
+                        FloatWindowActivity.this
+                );
             }
         });
 
-        findViewById(R.id.btn_dismiss).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                FloatWindowManager.getInstance().dismissWindow();
-            }
-        });
     }
 
 }

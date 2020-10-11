@@ -1,4 +1,4 @@
-package com.android.permission.rom;
+package me.mapleaf.permission.rom;
 
 import android.annotation.TargetApi;
 import android.app.AppOpsManager;

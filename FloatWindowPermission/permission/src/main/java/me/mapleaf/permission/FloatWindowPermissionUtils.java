@@ -1,28 +1,24 @@
 /*
  * Copyright (C) 2016 Facishare Technology Co., Ltd. All Rights Reserved.
  */
-package com.android.permission;
+package me.mapleaf.permission;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.PixelFormat;
-import android.graphics.Point;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
-import android.view.Gravity;
-import android.view.WindowManager;
 
-import com.android.permission.rom.HuaweiUtils;
-import com.android.permission.rom.MeizuUtils;
-import com.android.permission.rom.MiuiUtils;
-import com.android.permission.rom.OppoUtils;
-import com.android.permission.rom.QikuUtils;
-import com.android.permission.rom.RomUtils;
+import me.mapleaf.permission.rom.HuaweiUtils;
+import me.mapleaf.permission.rom.MeizuUtils;
+import me.mapleaf.permission.rom.MiuiUtils;
+import me.mapleaf.permission.rom.OppoUtils;
+import me.mapleaf.permission.rom.QikuUtils;
+import me.mapleaf.permission.rom.RomUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -34,34 +30,49 @@ import java.lang.reflect.Method;
  * @since 2016-10-17
  */
 
-public class FloatWindowManager {
-    private static final String TAG = "FloatWindowManager";
+public class FloatWindowPermissionUtils {
 
-    private static volatile FloatWindowManager instance;
+    private static final String TAG = "FPU";
 
-    private boolean isWindowDismiss = true;
-    private WindowManager windowManager = null;
-    private WindowManager.LayoutParams mParams = null;
-    private AVCallFloatView floatView = null;
+    private static volatile FloatWindowPermissionUtils instance;
+    private String confirm = "confirm";
+    private String cancel = "cancel";
+    private String message = "";
+
     private Dialog dialog;
 
-    public static FloatWindowManager getInstance() {
+    public static FloatWindowPermissionUtils getInstance() {
         if (instance == null) {
-            synchronized (FloatWindowManager.class) {
+            synchronized (FloatWindowPermissionUtils.class) {
                 if (instance == null) {
-                    instance = new FloatWindowManager();
+                    instance = new FloatWindowPermissionUtils();
                 }
             }
         }
         return instance;
     }
 
-    public void applyOrShowFloatWindow(Context context) {
+    public FloatWindowPermissionUtils setCancel(String cancel) {
+        this.cancel = cancel;
+        return this;
+    }
+
+    public FloatWindowPermissionUtils setConfirm(String confirm) {
+        this.confirm = confirm;
+        return this;
+    }
+
+    public FloatWindowPermissionUtils setMessage(String message) {
+        this.message = message;
+        return this;
+    }
+
+    public boolean applyOrCheckPermission(Context context) {
         if (checkPermission(context)) {
-            showWindow(context);
-        } else {
-            applyPermission(context);
+            return true;
         }
+        applyPermission(context);
+        return false;
     }
 
     private boolean checkPermission(Context context) {
@@ -243,7 +254,7 @@ public class FloatWindowManager {
     }
 
     private void showConfirmDialog(Context context, OnConfirmResult result) {
-        showConfirmDialog(context, "您的手机没有授予悬浮窗权限，请开启后再试", result);
+        showConfirmDialog(context, message, result);
     }
 
     private void showConfirmDialog(Context context, String message, final OnConfirmResult result) {
@@ -253,14 +264,14 @@ public class FloatWindowManager {
 
         dialog = new AlertDialog.Builder(context).setCancelable(true).setTitle("")
                 .setMessage(message)
-                .setPositiveButton("现在去开启",
+                .setPositiveButton(confirm,
                         new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 result.confirmResult(true);
                                 dialog.dismiss();
                             }
-                        }).setNegativeButton("暂不开启",
+                        }).setNegativeButton(cancel,
                         new DialogInterface.OnClickListener() {
 
                             @Override
@@ -276,65 +287,4 @@ public class FloatWindowManager {
         void confirmResult(boolean confirm);
     }
 
-    private void showWindow(Context context) {
-        if (!isWindowDismiss) {
-            Log.e(TAG, "view is already added here");
-            return;
-        }
-
-        isWindowDismiss = false;
-        if (windowManager == null) {
-            windowManager = (WindowManager) context.getApplicationContext().getSystemService(Context.WINDOW_SERVICE);
-        }
-
-        Point size = new Point();
-        windowManager.getDefaultDisplay().getSize(size);
-        int screenWidth = size.x;
-        int screenHeight = size.y;
-
-        mParams = new WindowManager.LayoutParams();
-        mParams.packageName = context.getPackageName();
-        mParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
-        mParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
-        mParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR
-                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
-        int mType;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            mType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-        } else {
-            mType = WindowManager.LayoutParams.TYPE_SYSTEM_ERROR;
-        }
-        mParams.type = mType;
-        mParams.format = PixelFormat.RGBA_8888;
-        mParams.gravity = Gravity.LEFT | Gravity.TOP;
-        mParams.x = screenWidth - dp2px(context, 100);
-        mParams.y = screenHeight - dp2px(context, 171);
-
-
-//        ImageView imageView = new ImageView(mContext);
-//        imageView.setImageResource(R.drawable.app_icon);
-        floatView = new AVCallFloatView(context);
-        floatView.setParams(mParams);
-        floatView.setIsShowing(true);
-        windowManager.addView(floatView, mParams);
-    }
-
-    public void dismissWindow() {
-        if (isWindowDismiss) {
-            Log.e(TAG, "window can not be dismiss cause it has not been added");
-            return;
-        }
-
-        isWindowDismiss = true;
-        floatView.setIsShowing(false);
-        if (windowManager != null && floatView != null) {
-            windowManager.removeViewImmediate(floatView);
-        }
-    }
-
-    private int dp2px(Context context, float dp){
-        final float scale = context.getResources().getDisplayMetrics().density;
-        return (int) (dp * scale + 0.5f);
-    }
 }
